@@ -3,7 +3,6 @@ package net.xansidev;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.item.v1.DefaultItemComponentEvents;
 import net.fabricmc.fabric.api.item.v1.EnchantmentEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.util.TriState;
@@ -40,16 +39,11 @@ public class Afterlife implements ModInitializer {
 	public static final int RIPTIDE_COOLDOWN = 60 * 20;
 	public static final int COMBAT_WINDOW = 10 * 20;
 	public static final int WEAVING_DURATION = 8 * 60 * 20;
-	public static final int END_CRYSTAL_STACK = 4;
 
 	private static final Map<UUID, Long> LAST_COMBAT = new HashMap<>();
 
 	@Override
 	public void onInitialize() {
-		// End crystals stack to 4 (server-side; vanilla clients may show minor desync)
-		DefaultItemComponentEvents.MODIFY.register(ctx ->
-			ctx.modify(Items.END_CRYSTAL, b -> b.set(DataComponents.MAX_STACK_SIZE, END_CRYSTAL_STACK)));
-
 		// Combat tracking: any damage dealt or taken by a player
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDmg, dmg, blocked) -> {
 			if (entity instanceof ServerPlayer p) markCombat(p);
@@ -124,6 +118,17 @@ public class Afterlife implements ModInitializer {
 		if (!potion.is(Items.POTION) || !ingredient.is(Items.REDSTONE)) return false;
 		PotionContents c = potion.get(DataComponents.POTION_CONTENTS);
 		return c != null && c.potion().filter(h -> h.is(Potions.WEAVING)).isPresent();
+	}
+
+	// Our 8:00 potion: no base potion, custom Weaving effect with the long duration
+	public static boolean isLongWeaving(ItemStack stack) {
+		if (!stack.is(Items.POTION)) return false;
+		PotionContents c = stack.get(DataComponents.POTION_CONTENTS);
+		if (c == null || c.potion().isPresent()) return false;
+		for (MobEffectInstance e : c.customEffects()) {
+			if (e.getEffect().is(MobEffects.WEAVING) && e.getDuration() == WEAVING_DURATION) return true;
+		}
+		return false;
 	}
 
 	public static ItemStack longWeavingPotion() {
