@@ -1,18 +1,24 @@
 package net.xansidev;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.item.v1.EnchantmentEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.util.TriState;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionContents;
@@ -33,22 +39,34 @@ public class Afterlife implements ModInitializer {
 	public static final String MOD_ID = "afterlife";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	// ---- tweak these (ticks, 20 = 1s) ----
-	public static final int MACE_COOLDOWN = 30 * 20;
-	public static final int LUNGE_COOLDOWN = 3 * 20;
-	public static final int RIPTIDE_COOLDOWN = 60 * 20;
+	// Cooldown lengths live in config/afterlife.json and are changed with /afterlife cooldown
 	public static final int COMBAT_WINDOW = 10 * 20;
 	public static final int WEAVING_DURATION = 8 * 60 * 20;
+
+	/** Played by ID only (never registered) so vanilla clients are unaffected. */
+	public static final Identifier BELL_ID = Identifier.fromNamespaceAndPath(MOD_ID, "ghost_bell");
+	private static final Holder<SoundEvent> GHOST_BELL = Holder.direct(SoundEvent.createVariableRangeEvent(BELL_ID));
 
 	private static final Map<UUID, Long> LAST_COMBAT = new HashMap<>();
 
 	@Override
 	public void onInitialize() {
+		AfterlifeConfig.load();
+
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+			AfterlifeCommands.register(dispatcher));
+
 		// Combat tracking: any damage dealt or taken by a player
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDmg, dmg, blocked) -> {
 			if (entity instanceof ServerPlayer p) markCombat(p);
 			if (source.getEntity() instanceof ServerPlayer attacker) markCombat(attacker);
 		});
+
+		// Ghost bell: everyone within range (same dimension) hears a toll when a player dies
+		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+			if (entity instanceof ServerPlayer p) ghostBell(p);
+		});
+
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
 			LAST_COMBAT.remove(handler.getPlayer().getUUID()));
 
@@ -75,6 +93,41 @@ public class Afterlife implements ModInitializer {
 		});
 
 		LOGGER.info("Afterlife initialize!");
+	}
+
+	// ---------- Ghost bell ----------
+	private static void ghostBell(ServerPlayer dead) {
+		ServerLevel level = (ServerLevel) dead.level();
+		double radius = Math.max(1, AfterlifeConfig.get().bellRadius);
+
+		for (ServerPlayer other : level.players()) {
+			if (other == dead) continue;
+			double dx = dead.getX() - other.getX();
+			double dy = dead.getY() - other.getY();
+			double dz = dead.getZ() - other.getZ();
+			double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			if (dist > radius) continue;
+
+			// quieter the farther away; nudged 3 blocks toward the death for a faint direction hint
+			float volume = (float) Math.max(0.15, 1.0 - (dist / radius) * 0.85);
+			double nx = dist < 0.001 ? 0 : dx / dist;
+			double ny = dist < 0.001 ? 0 : dy / dist;
+			double nz = dist < 0.001 ? 0 : dz / dist;
+
+			other.connection.send(new ClientboundSoundPacket(
+				GHOST_BELL, SoundSource.AMBIENT,
+				other.getX() + nx * 3, other.getY() + ny * 3, other.getZ() + nz * 3,
+				volume, 1.0f, level.getRandom().nextLong()));
+		}
+	}
+
+	// ---------- Cooldowns (config-driven; 0 = off) ----------
+	public static int maceTicks() { return AfterlifeConfig.get().maceCooldownSeconds * 20; }
+	public static int lungeTicks() { return AfterlifeConfig.get().lungeCooldownSeconds * 20; }
+	public static int riptideTicks() { return AfterlifeConfig.get().riptideCooldownSeconds * 20; }
+
+	public static void applyCooldown(ServerPlayer p, ItemStack stack, int ticks) {
+		if (ticks > 0) p.getCooldowns().addCooldown(stack, ticks);
 	}
 
 	// ---------- Enchant stripping ----------
@@ -105,7 +158,7 @@ public class Afterlife implements ModInitializer {
 	// ---------- Riptide hook (called from TridentItemMixin after a successful release) ----------
 	public static void riptideUsed(ServerPlayer p, ItemStack stack) {
 		if (EnchantmentHelper.getTridentSpinAttackStrength(stack, p) > 0 && inCombat(p)) {
-			p.getCooldowns().addCooldown(stack, RIPTIDE_COOLDOWN);
+			applyCooldown(p, stack, riptideTicks());
 		}
 	}
 

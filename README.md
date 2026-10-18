@@ -12,6 +12,8 @@ This template is available under the CC0 license. Feel free to learn from it and
 Remove Breach and Density from maces
 3 Second Lunge cooldown
 Remove unbreaking from Shields
-1 minute Riptide Cooldown (Only in combat if possible)
+1 minute Riptide Cooldown
+
+Secret added!
 
 Any breaking changes be reported to xansidev!

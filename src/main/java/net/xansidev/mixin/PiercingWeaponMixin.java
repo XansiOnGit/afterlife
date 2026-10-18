@@ -29,7 +29,7 @@ public abstract class PiercingWeaponMixin {
 		}
 		// Only cooldown the lunge if you were already in combat before this jab
 		if (Afterlife.inCombat(p)) {
-			p.getCooldowns().addCooldown(stack, Afterlife.LUNGE_COOLDOWN);
+			Afterlife.applyCooldown(p, stack, Afterlife.lungeTicks());
 		}
 	}
 }

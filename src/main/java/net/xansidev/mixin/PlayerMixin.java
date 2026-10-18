@@ -41,7 +41,7 @@ public abstract class PlayerMixin {
 		if (!smash || !((Object) this instanceof ServerPlayer sp)) return;
 		ItemStack stack = sp.getMainHandItem();
 		if (stack.is(Items.MACE) && target instanceof LivingEntity && target.isAttackable()) {
-			sp.getCooldowns().addCooldown(stack, Afterlife.MACE_COOLDOWN);
+			Afterlife.applyCooldown(sp, stack, Afterlife.maceTicks());
 		}
 	}
 }

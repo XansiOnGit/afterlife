@@ -1,0 +1,8 @@
+{
+  "ghost_bell": {
+    "subtitle": "subtitles.afterlife.ghost_bell",
+    "sounds": [
+      "afterlife:ghost_bell"
+    ]
+  }
+}
