@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "net.xansidev.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "PlayerMixin",
+    "TridentItemMixin",
+    "PiercingWeaponMixin",
+    "PotionBrewingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
