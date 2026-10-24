@@ -1,19 +1,10 @@
-# Afterlife
-
-## Setup
+# Afterlife 2.0.5
 
 For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.
 
-## License
-
-This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
-
-30 Second Mace Cooldown
+Configurable cooldowns and such.
+Shields can't use unbreaking now.
 Remove Breach and Density from maces
-3 Second Lunge cooldown
-Remove unbreaking from Shields
-1 minute Riptide Cooldown
+Ghost Bell sound is played on player death.
 
-Secret added!
-
-Any breaking changes be reported to xansidev!
+any issues with the mod that is not intended behavior make a report in issues tab.
