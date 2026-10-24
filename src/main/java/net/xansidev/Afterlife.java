@@ -71,14 +71,12 @@ public class Afterlife implements ModInitializer {
 			LAST_COMBAT.remove(handler.getPlayer().getUUID()));
 
 		// Enchant rules (table + anvil): no Breach/Density on maces, no Unbreaking on shields,
-		// and the secret: Breach is allowed on axes.
+		// and the secret: Breach is allowed on axes. - Edit; they caught me :<
 		EnchantmentEvents.ALLOW_ENCHANTING.register((enchantment, target, context) -> {
 			if (target.is(Items.MACE) && (enchantment.is(Enchantments.BREACH) || enchantment.is(Enchantments.DENSITY)))
 				return TriState.FALSE;
 			if (target.is(Items.SHIELD) && enchantment.is(Enchantments.UNBREAKING))
 				return TriState.FALSE;
-			if (target.is(ItemTags.AXES) && enchantment.is(Enchantments.BREACH))
-				return TriState.TRUE;
 			return TriState.DEFAULT;
 		});
 
