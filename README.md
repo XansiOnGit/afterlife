@@ -8,3 +8,5 @@ Remove Breach and Density from maces
 Ghost Bell sound is played on player death.
 
 any issues with the mod that is not intended behavior make a report in issues tab.
+
+Proprietary License - All Rights Reserved
