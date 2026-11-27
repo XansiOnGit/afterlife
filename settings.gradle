@@ -9,5 +9,5 @@ pluginManagement {
 	}
 }
 
-// Should match your modid
+// Should match modid
 rootProject.name = 'afterlife'
