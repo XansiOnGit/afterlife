@@ -67,7 +67,10 @@ public class Afterlife implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		
+		//Sync player lives and the config itself to registrys and such.
 		AfterlifeConfig.load();
+		LivesSync.init();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 			AfterlifeCommands.register(dispatcher));

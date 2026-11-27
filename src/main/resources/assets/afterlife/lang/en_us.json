@@ -1,4 +1,8 @@
 {
   "options.afterlife.ghost_bell": "Ghost Bell",
-  "subtitles.afterlife.ghost_bell": "Distant bell tolls"
+  "subtitles.afterlife.ghost_bell": "Distant bell tolls",
+  "options.afterlife.heart_hud": "Life Heart",
+  "options.afterlife.heart_size": "Heart Size",
+  "options.afterlife.heart_x": "Heart X",
+  "options.afterlife.heart_y": "Heart Y"
 }

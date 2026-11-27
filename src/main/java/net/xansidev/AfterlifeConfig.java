@@ -16,6 +16,10 @@ public final class AfterlifeConfig {
 	public int riptideCooldownSeconds = 60;
 	public int bellRadius = 100;
 	/** Client-side only: toggled from Options > Accessibility. */
+	public boolean heartHudEnabled = true;
+	public int heartHudOffsetX = 0;
+	public int heartHudOffsetY = 0;
+	public int heartHudSize = 9;
 	public boolean ghostBellEnabled = true;
 	/** ID of the one valid god mace. Changing it invalidates every older god mace. */
 	public String godMaceId = "";

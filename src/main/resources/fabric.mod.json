@@ -18,6 +18,9 @@
 		"main": [
 			"net.xansidev.Afterlife"
 		],
+		"client": [
+			"net.xansidev.client.AfterlifeClient"
+		],
 		"fabric-datagen": [
 			"net.xansidev.AfterlifeDataGenerator"
 		]

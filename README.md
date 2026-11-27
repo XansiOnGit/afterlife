@@ -9,6 +9,7 @@ Afterlife server side, can and will be subject to change.
 - **Maces** can't get Breach or Density
 - **Ghost Bell:** a bell tolls for nearby players when someone dies. Players can turn it off in Options > Accessibility Settings.
 - **8:00 Weaving:** brew a Potion of Weaving with redstone for an 8 minute version. Gunpowder turns it into a splash potion, in either order.
+- **HUD heart:** new hud icon of a heart display on client side requires a server however to talk and repeat back to itself.
 
 ## Commands
 

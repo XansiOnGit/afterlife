@@ -22,6 +22,11 @@ public abstract class AccessibilityOptionsScreenMixin extends OptionsSubScreen {
 
 	@Inject(method = "addOptions", at = @At("RETURN"))
 	private void afterlife$addGhostBellToggle(CallbackInfo ci) {
-		this.list.addBig(AfterlifeClient.ghostBellOption());
-	}
+		this.list.addSmall(
+    	AfterlifeClient.ghostBellOption(),
+    	AfterlifeClient.heartHudOption(),
+		AfterlifeClient.heartSizeOption(),
+		AfterlifeClient.heartXOption(),
+		AfterlifeClient.heartYOption());
+		}
 }
