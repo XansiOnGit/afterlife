@@ -6,7 +6,7 @@ A Fabric mod for Minecraft 1.21.11 that adds configurable combat cooldowns and a
 
 - **Cooldowns:** the mace smash, spear Lunge and Riptide trident each get a configurable cooldown, which only applies if you're in combat (mace smashes always trigger it).
 - **Shields** can't be enchanted with Unbreaking.
-- **Maces** can't get Breach or Density (Breach is still allowed on axes).
+- **Maces** can't get Breach or Density
 - **Ghost Bell:** a bell tolls for nearby players when someone dies. Players can turn it off in Options > Accessibility Settings.
 - **8:00 Weaving:** brew a Potion of Weaving with redstone for an 8 minute version. Gunpowder turns it into a splash potion, in either order.
 
