@@ -1,6 +1,6 @@
 # Afterlife 2.5.1
 
-A Fabric mod for Minecraft 1.21.11 that adds configurable combat cooldowns and a few rule changes. It works on a server by itself, and players don't need it installed. Players who do install it also get the Ghost Bell toggle and the custom god mace sprite.
+Afterlife server side, can and will be subject to change.
 
 ## Features
 
