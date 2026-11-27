@@ -27,21 +27,23 @@ public abstract class PlayerMixin {
 		ItemStack stack = self.getMainHandItem();
 		afterlife$smash = stack.is(Items.MACE) && MaceItem.canSmashAttack(self);
 
-		// Smash attacks are blocked while on cooldown; normal sword-style hits still work.
-		if (afterlife$smash && self.getCooldowns().isOnCooldown(stack)) {
-			afterlife$smash = false;
-			ci.cancel();
-		}
+		// Smash attacks are blocked while on cooldown; normal sword-style hits still work and dont frustrate the fuck outta me, god mace has no cooldown.
+		if (afterlife$smash && !Afterlife.isGodMace(stack) && self.getCooldowns().isOnCooldown(stack)) {
+		afterlife$smash = false;
+		ci.cancel();
+}
 	}
 
+	// I genuinely forgot what this does
 	@Inject(method = "attack", at = @At("RETURN"))
 	private void afterlife$maceCooldown(Entity target, CallbackInfo ci) {
 		boolean smash = afterlife$smash;
 		afterlife$smash = false;
 		if (!smash || !((Object) this instanceof ServerPlayer sp)) return;
 		ItemStack stack = sp.getMainHandItem();
-		if (stack.is(Items.MACE) && target instanceof LivingEntity && target.isAttackable()) {
-			Afterlife.applyCooldown(sp, stack, Afterlife.maceTicks());
-		}
+		if (stack.is(Items.MACE) && !Afterlife.isGodMace(stack)
+		&& target instanceof LivingEntity && target.isAttackable()) {
+		Afterlife.applyCooldown(sp, stack, Afterlife.maceTicks());
+		}	
 	}
 }

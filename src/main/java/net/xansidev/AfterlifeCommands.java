@@ -18,19 +18,41 @@ public final class AfterlifeCommands {
 	private AfterlifeCommands() {}
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-		dispatcher.register(Commands.literal("afterlife")
-			.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-			.then(Commands.literal("cooldown")
-				.executes(ctx -> show(ctx.getSource()))
-				.then(setter("mace"))
-				.then(setter("lunge"))
-				.then(setter("riptide"))
-				.then(Commands.literal("get")
-					.then(Commands.argument("player", EntityArgument.player())
-						.executes(ctx -> get(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
-				.then(Commands.literal("reset")
-					.then(Commands.argument("player", EntityArgument.player())
-						.executes(ctx -> reset(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))));
+	dispatcher.register(Commands.literal("afterlife")
+		.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+		.then(Commands.literal("cooldown")
+			.executes(ctx -> show(ctx.getSource()))
+			.then(setter("mace"))
+			.then(setter("lunge"))
+			.then(setter("riptide"))
+			.then(Commands.literal("get")
+				.then(Commands.argument("player", EntityArgument.player())
+					.executes(ctx -> get(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+			.then(Commands.literal("reset")
+				.then(Commands.argument("player", EntityArgument.player())
+					.executes(ctx -> reset(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"))))))
+		.then(Commands.literal("tag")
+			.then(Commands.literal("godmace")
+				.executes(ctx -> tagGodMace(ctx.getSource(), ctx.getSource().getPlayerOrException()))
+				.then(Commands.argument("player", EntityArgument.player())
+					.executes(ctx -> tagGodMace(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+			.then(Commands.literal("clear")
+				.executes(ctx -> {
+					Afterlife.clearGodMaceId();
+					ctx.getSource().sendSuccess(() -> Component.literal("God mace invalidated"), true);
+					return 1;
+				}))));
+}
+
+	private static int tagGodMace(CommandSourceStack src, ServerPlayer p) {
+		ItemStack held = p.getMainHandItem();
+		if (!held.is(Items.MACE)) {
+			src.sendFailure(Component.literal(p.getGameProfile().name() + " isn't holding a mace"));
+			return 0;
+		}
+		Afterlife.makeGodMace(held, src.registryAccess());
+		src.sendSuccess(() -> Component.literal("That mace is now the one and only god mace"), true);
+		return 1;
 	}
 
 	private static LiteralArgumentBuilder<CommandSourceStack> setter(String which) {

@@ -15,8 +15,12 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.item.component.UseCooldown;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +30,18 @@ import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.entity.animal.allay.Allay;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.entity.vehicle.ContainerEntity;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.block.Blocks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,13 +96,33 @@ public class Afterlife implements ModInitializer {
 			return TriState.DEFAULT;
 		});
 
-		// Safety net: rip banned enchants off anything that slipped through (loot, commands, creative)
-		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			if (server.getTickCount() % 10 != 0) return;
-			for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-				var inv = p.getInventory();
-				for (int i = 0; i < inv.getContainerSize(); i++) strip(inv.getItem(i));
-				strip(p.containerMenu.getCarried());
+		// God mace can't be handed to item frames, armor stands, chest boats/minecarts, allays fucken. anything that i can think of.
+		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (isGodMace(player.getItemInHand(hand))
+				&& (entity instanceof ItemFrame || entity instanceof ArmorStand
+					|| entity instanceof ContainerEntity || entity instanceof Allay)) {
+				return InteractionResult.FAIL;
+			}
+			return InteractionResult.PASS;
+		});
+
+		// or put into decorated pots had to look this fucker up to figure it out.
+		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+			if (isGodMace(player.getItemInHand(hand))
+				&& level.getBlockState(hit.getBlockPos()).is(Blocks.DECORATED_POT)) {
+				return InteractionResult.FAIL;
+			}
+			return InteractionResult.PASS;
+		});
+
+		// main tick loop this miiiighhhttt cause a little lag here and there at max players.
+
+			ServerTickEvents.END_SERVER_TICK.register(server -> {
+		if (server.getTickCount() % 10 != 0) return;
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			var inv = p.getInventory();
+			for (int i = 0; i < inv.getContainerSize(); i++) strip(inv.getItem(i), server.registryAccess());
+			strip(p.containerMenu.getCarried(), server.registryAccess());
 			}
 		});
 
@@ -129,18 +165,110 @@ public class Afterlife implements ModInitializer {
 	}
 
 	// ---------- Enchant stripping ----------
-	private static void strip(ItemStack stack) {
-		if (stack.isEmpty()) return;
-		if (stack.is(Items.MACE) && (hasEnchant(stack, Enchantments.BREACH) || hasEnchant(stack, Enchantments.DENSITY))) {
+
+	private static void strip(ItemStack stack, RegistryAccess registries) {
+	if (stack.isEmpty()) return;
+	if (stack.is(Items.MACE)) {
+		if (isGodMace(stack)) { // the real one: keep it topped up (grindstone etc.)
+			applyGodMace(stack, registries);
+			return;
+		}
+		if (!godTag(stack).isEmpty()) {
+			clearGod(stack); // stale ex-god mace
+			stack.remove(DataComponents.USE_COOLDOWN);
+		}
+		if (hasEnchant(stack, Enchantments.BREACH) || hasEnchant(stack, Enchantments.DENSITY)) {
 			EnchantmentHelper.updateEnchantments(stack, e ->
 				e.removeIf(h -> h.is(Enchantments.BREACH) || h.is(Enchantments.DENSITY)));
-		} else if (stack.is(Items.SHIELD) && hasEnchant(stack, Enchantments.UNBREAKING)) {
-			EnchantmentHelper.updateEnchantments(stack, e -> e.removeIf(h -> h.is(Enchantments.UNBREAKING)));
+		}
+	} else if (stack.is(Items.SHIELD) && hasEnchant(stack, Enchantments.UNBREAKING)) {
+		EnchantmentHelper.updateEnchantments(stack, e -> e.removeIf(h -> h.is(Enchantments.UNBREAKING)));
+	}
+}
+
+		public static boolean hasEnchant(ItemStack stack, ResourceKey<Enchantment> key) {
+		return stack.getEnchantments().keySet().stream().anyMatch(h -> h.is(key));
+	}
+
+	// ---------- God mace (just components on a vanilla mace, so server side only) ----------
+	private static final String GOD_KEY = "afterlife_godmace";
+	private static final String GOD_MODEL_KEY = "god_mace";
+
+	private static boolean hasGodModel(ItemStack stack) {
+		CustomModelData m = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+			return m != null && m.strings().contains(GOD_MODEL_KEY);
+}
+
+	private static String godTag(ItemStack stack) {
+		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+		return data == null ? "" : data.copyTag().getString(GOD_KEY).orElse("");
+	}
+
+	public static boolean isGodMace(ItemStack stack) {
+		if (!stack.is(Items.MACE)) return false;
+		String id = AfterlifeConfig.get().godMaceId;
+		return !id.isEmpty() && id.equals(godTag(stack));
+	}
+
+	/** Makes this stack THE god mace. Every previous one becomes stale automatically. */
+	public static void makeGodMace(ItemStack stack, RegistryAccess registries) {
+		String id = UUID.randomUUID().toString();
+		AfterlifeConfig.get().godMaceId = id;
+		AfterlifeConfig.save();
+		CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putString(GOD_KEY, id));
+		applyGodMace(stack, registries);
+	}
+
+	/** Invalidates the current god mace without making a new one. */
+	public static void clearGodMaceId() {
+		AfterlifeConfig.get().godMaceId = "";
+		AfterlifeConfig.save();
+	}
+	private static final Identifier GOD_COOLDOWN_GROUP = Identifier.fromNamespaceAndPath(MOD_ID, "god_mace");
+	private static final int GOD_GOLD = 0xFFD700; // just a cool color so the wielder can see it ig. idk looks cool :p
+	private static final Style GOD_STYLE = Style.EMPTY.withColor(TextColor.fromRgb(GOD_GOLD)).withItalic(false);
+
+	private static void applyGodMace(ItemStack stack, RegistryAccess registries) {
+	Component custom = stack.get(DataComponents.CUSTOM_NAME);
+	if (custom != null) {
+		if (!GOD_STYLE.equals(custom.getStyle())) {
+			stack.set(DataComponents.CUSTOM_NAME, Component.literal(custom.getString()).withStyle(GOD_STYLE));
+		}
+	} else {
+		Component item = stack.get(DataComponents.ITEM_NAME);
+		if (item == null || !GOD_STYLE.equals(item.getStyle())) {
+			stack.set(DataComponents.ITEM_NAME, Component.translatable("item.minecraft.mace").withStyle(GOD_STYLE));
 		}
 	}
 
-	public static boolean hasEnchant(ItemStack stack, ResourceKey<Enchantment> key) {
-		return stack.getEnchantments().keySet().stream().anyMatch(h -> h.is(key));
+	// own cooldown group so normal mace cooldowns don't show on the god mace i've come to like calling it the god mace
+	if (stack.get(DataComponents.USE_COOLDOWN) == null) {
+		stack.set(DataComponents.USE_COOLDOWN, new UseCooldown(0.05f, Optional.of(GOD_COOLDOWN_GROUP)));
+	}
+
+	// leftover from the old custom sprite attempt may change in the future but amber doesn't want a sprite they just figure it out the hard way.
+	stack.remove(DataComponents.CUSTOM_MODEL_DATA);
+
+	stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+
+	Holder<Enchantment> density = registries.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.DENSITY);
+	if (stack.getEnchantments().getLevel(density) < 1) {
+		EnchantmentHelper.updateEnchantments(stack, e -> e.set(density, 1));
+		}
+	}
+
+	private static void clearGod(ItemStack stack) {
+		CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.remove(GOD_KEY));
+		CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+		if (data != null && data.isEmpty()) stack.remove(DataComponents.CUSTOM_DATA);
+
+		// back to a normal mace: plain name, keep any custom name the player gave it
+		stack.set(DataComponents.ITEM_NAME, Component.translatable("item.minecraft.mace"));
+		Component custom = stack.get(DataComponents.CUSTOM_NAME);
+		if (custom != null) {
+			stack.set(DataComponents.CUSTOM_NAME, Component.literal(custom.getString()));
+		}
+		stack.remove(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
 	}
 
 	// ---------- Combat tracking ----------
@@ -171,16 +299,25 @@ public class Afterlife implements ModInitializer {
 		return c != null && c.potion().filter(h -> h.is(Potions.WEAVING)).isPresent();
 	}
 
-	// Our 8:00 potion: no base potion, custom Weaving effect with the long duration
+	/** Base (non-8:00) Potion of Weaving, in a bottle or a splash bottle. */
+	// finally it can work with both :DDDD
+	public static boolean isWeavingPotion(ItemStack stack) {
+		if (!stack.is(Items.POTION) && !stack.is(Items.SPLASH_POTION)) return false;
+		PotionContents c = stack.get(DataComponents.POTION_CONTENTS);
+		return c != null && c.potion().filter(h -> h.is(Potions.WEAVING)).isPresent();
+	}
+
+	// Our 8:00 potion: no base potion, custom Weaving effect with the long duration.
+	// Works for both bottle and splash.
 	public static boolean isLongWeaving(ItemStack stack) {
-		if (!stack.is(Items.POTION)) return false;
+		if (!stack.is(Items.POTION) && !stack.is(Items.SPLASH_POTION)) return false;
 		PotionContents c = stack.get(DataComponents.POTION_CONTENTS);
 		if (c == null || c.potion().isPresent()) return false;
 		for (MobEffectInstance e : c.customEffects()) {
 			if (e.getEffect().is(MobEffects.WEAVING) && e.getDuration() == WEAVING_DURATION) return true;
 		}
 		return false;
-	}
+}
 
 	public static ItemStack longWeavingPotion() {
 		ItemStack s = new ItemStack(Items.POTION);

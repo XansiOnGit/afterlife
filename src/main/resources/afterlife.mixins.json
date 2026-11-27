@@ -3,10 +3,12 @@
   "package": "net.xansidev.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "PlayerMixin",
-    "TridentItemMixin",
-    "PiercingWeaponMixin",
-    "PotionBrewingMixin"
+	"PiercingWeaponMixin",
+	"PlayerMixin",
+	"PotionBrewingMixin",
+	"TridentItemMixin",
+	"SlotMixin",
+	"HopperBlockEntityMixin"
   ],
   "client": [
     "client.AccessibilityOptionsScreenMixin",

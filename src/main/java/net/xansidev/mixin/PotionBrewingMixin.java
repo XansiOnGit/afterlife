@@ -9,34 +9,65 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// Potion of Weaving + Redstone -> 8:00 Weaving (custom effects, no custom registry entry),
-// and the 8:00 potion can be turned into a splash potion with gunpowder (not lingering).
+// Both brewing orders reach "Splash Potion of Weaving (8:00)":
+//   Weaving -> Redstone -> Gunpowder
+//   Weaving -> Gunpowder -> Redstone
+// Splash 8:00 Weaving cannot be turned into lingering (or anything else).
+// I am praying this works and is not bugged as fuck.
 @Mixin(PotionBrewing.class)
 public abstract class PotionBrewingMixin {
 
-	// hasMix(input, ingredient)
-	@Inject(method = "hasMix", at = @At("HEAD"), cancellable = true)
-	private void afterlife$hasMix(ItemStack input, ItemStack ingredient, CallbackInfoReturnable<Boolean> cir) {
-		if (Afterlife.isLongWeaving(input)) {
-			// Only a normal bottle + gunpowder is allowed. Everything else is blocked.
-			cir.setReturnValue(input.is(Items.POTION) && ingredient.is(Items.GUNPOWDER));
-		} else if (Afterlife.isWeavingBrew(input, ingredient)) {
-			cir.setReturnValue(true);
-		}
-	}
+    // hasMix(input, ingredient)
+    @Inject(method = "hasMix", at = @At("HEAD"), cancellable = true)
+    private void afterlife$hasMix(ItemStack input, ItemStack ingredient, CallbackInfoReturnable<Boolean> cir) {
+        boolean longWeaving = Afterlife.isLongWeaving(input);
+        boolean baseWeaving = Afterlife.isWeavingPotion(input);
 
-	// mix(ingredient, input)  <-- order is flipped vs hasMix
-	@Inject(method = "mix", at = @At("HEAD"), cancellable = true)
-	private void afterlife$mix(ItemStack ingredient, ItemStack input, CallbackInfoReturnable<ItemStack> cir) {
-		if (Afterlife.isLongWeaving(input)) {
-			if (input.is(Items.POTION) && ingredient.is(Items.GUNPOWDER)) {
-				cir.setReturnValue(input.transmuteCopy(Items.SPLASH_POTION));
-			} else {
-				// stand calls mix() on every slot, so hand it back untouched
-				cir.setReturnValue(input);
-			}
-		} else if (Afterlife.isWeavingBrew(ingredient, input)) {
-			cir.setReturnValue(Afterlife.longWeavingPotion());
-		}
-	}
+        if (!longWeaving && !baseWeaving) return; // not ours, let vanilla handle it
+
+        boolean isBottle = input.is(Items.POTION);
+        boolean isSplash = input.is(Items.SPLASH_POTION);
+
+        // Redstone: base weaving -> 8:00 weaving (works on bottle OR splash)
+        if (baseWeaving && ingredient.is(Items.REDSTONE) && (isBottle || isSplash)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        // Gunpowder: bottle -> splash (works on base OR 8:00 weaving)
+        if (isBottle && ingredient.is(Items.GUNPOWDER)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        // Everything else is blocked (no lingering, no re-redstone, etc.)
+        cir.setReturnValue(false);
+    }
+
+    // mix(ingredient, input) -- argument order is flipped vs hasMix
+    @Inject(method = "mix", at = @At("HEAD"), cancellable = true)
+    private void afterlife$mix(ItemStack ingredient, ItemStack input, CallbackInfoReturnable<ItemStack> cir) {
+        boolean longWeaving = Afterlife.isLongWeaving(input);
+        boolean baseWeaving = Afterlife.isWeavingPotion(input);
+
+        if (!longWeaving && !baseWeaving) return;
+
+        boolean isBottle = input.is(Items.POTION);
+        boolean isSplash = input.is(Items.SPLASH_POTION);
+
+        // Redstone: keep the container the potion is already in
+        if (baseWeaving && ingredient.is(Items.REDSTONE) && (isBottle || isSplash)) {
+            cir.setReturnValue(Afterlife.longWeavingPotion().transmuteCopy(input.getItem()));
+            return;
+        }
+
+        // Gunpowder: swap container, keep all components (base or 8:00)
+        if (isBottle && ingredient.is(Items.GUNPOWDER)) {
+            cir.setReturnValue(input.transmuteCopy(Items.SPLASH_POTION));
+            return;
+        }
+
+        // The stand calls mix() on every slot, so hand it back untouched
+        cir.setReturnValue(input);
+    }
 }

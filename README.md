@@ -1,12 +1,46 @@
-# Afterlife 2.0.5
+# Afterlife 2.5.1
 
-For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.
+A Fabric mod for Minecraft 1.21.11 that adds configurable combat cooldowns and a few rule changes. It works on a server by itself, and players don't need it installed. Players who do install it also get the Ghost Bell toggle and the custom god mace sprite.
 
-Configurable cooldowns and such.
-Shields can't use unbreaking now.
-Remove Breach and Density from maces
-Ghost Bell sound is played on player death.
+## Features
 
-any issues with the mod that is not intended behavior make a report in issues tab.
+- **Cooldowns:** the mace smash, spear Lunge and Riptide trident each get a configurable cooldown, which only applies if you're in combat (mace smashes always trigger it).
+- **Shields** can't be enchanted with Unbreaking.
+- **Maces** can't get Breach or Density (Breach is still allowed on axes).
+- **Ghost Bell:** a bell tolls for nearby players when someone dies. Players can turn it off in Options > Accessibility Settings.
+- **8:00 Weaving:** brew a Potion of Weaving with redstone for an 8 minute version. Gunpowder turns it into a splash potion, in either order.
+
+## Commands
+
+All commands need operator permission.
+
+| Command | What it does |
+|---|---|
+| `/afterlife cooldown` | Shows the current cooldowns |
+| `/afterlife cooldown mace <seconds>` | Sets the mace cooldown (0 = off) |
+| `/afterlife cooldown lunge <seconds>` | Sets the Lunge cooldown (0 = off) |
+| `/afterlife cooldown riptide <seconds>` | Sets the Riptide cooldown (0 = off) |
+| `/afterlife cooldown get <player>` | Shows a player's remaining cooldowns |
+| `/afterlife cooldown reset <player>` | Clears a player's cooldowns |
+| `/afterlife tag godmace [player]` | Makes the held mace the one and only god mace |
+| `/afterlife tag clear` | Removes the god mace status |
+
+## Config
+
+Saved in `config/afterlife.json`. Defaults:
+
+- `maceCooldownSeconds`: 30
+- `lungeCooldownSeconds`: 3
+- `riptideCooldownSeconds`: 60
+- `bellRadius`: 100 (blocks)
+
+## Installing
+
+1. Install [Fabric Loader](https://fabricmc.net/use/) and Fabric API for 1.21.11.
+2. Put the Afterlife jar in your `mods` folder.
+
+## Issues
+
+If something isn't working as intended, please open a report in the Issues tab.
 
 Proprietary License - All Rights Reserved

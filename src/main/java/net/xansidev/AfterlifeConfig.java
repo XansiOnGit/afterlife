@@ -17,6 +17,8 @@ public final class AfterlifeConfig {
 	public int bellRadius = 100;
 	/** Client-side only: toggled from Options > Accessibility. */
 	public boolean ghostBellEnabled = true;
+	/** ID of the one valid god mace. Changing it invalidates every older god mace. */
+	public String godMaceId = "";
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static AfterlifeConfig instance = new AfterlifeConfig();
