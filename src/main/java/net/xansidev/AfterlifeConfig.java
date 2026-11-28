@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 /** Saved to config/afterlife.json. 0 seconds = that cooldown is disabled. */
 public final class AfterlifeConfig {
@@ -23,6 +25,8 @@ public final class AfterlifeConfig {
 	public boolean ghostBellEnabled = true;
 	/** ID of the one valid god mace. Changing it invalidates every older god mace. */
 	public String godMaceId = "";
+	
+	public Map<String, String> devTags = new HashMap<>();
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static AfterlifeConfig instance = new AfterlifeConfig();

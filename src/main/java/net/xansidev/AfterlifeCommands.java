@@ -2,6 +2,7 @@ package net.xansidev;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -18,31 +19,48 @@ public final class AfterlifeCommands {
 	private AfterlifeCommands() {}
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-	dispatcher.register(Commands.literal("afterlife")
-		.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-		.then(Commands.literal("cooldown")
-			.executes(ctx -> show(ctx.getSource()))
-			.then(setter("mace"))
-			.then(setter("lunge"))
-			.then(setter("riptide"))
-			.then(Commands.literal("get")
-				.then(Commands.argument("player", EntityArgument.player())
-					.executes(ctx -> get(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
-			.then(Commands.literal("reset")
-				.then(Commands.argument("player", EntityArgument.player())
-					.executes(ctx -> reset(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"))))))
-		.then(Commands.literal("tag")
-			.then(Commands.literal("godmace")
-				.executes(ctx -> tagGodMace(ctx.getSource(), ctx.getSource().getPlayerOrException()))
-				.then(Commands.argument("player", EntityArgument.player())
-					.executes(ctx -> tagGodMace(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
-			.then(Commands.literal("clear")
-				.executes(ctx -> {
-					Afterlife.clearGodMaceId();
-					ctx.getSource().sendSuccess(() -> Component.literal("God mace invalidated"), true);
-					return 1;
-				}))));
-}
+		dispatcher.register(Commands.literal("afterlife")
+			.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+			.then(Commands.literal("cooldown")
+				.executes(ctx -> show(ctx.getSource()))
+				.then(setter("mace"))
+				.then(setter("lunge"))
+				.then(setter("riptide"))
+				.then(Commands.literal("get")
+					.then(Commands.argument("player", EntityArgument.player())
+						.executes(ctx -> get(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+				.then(Commands.literal("reset")
+					.then(Commands.argument("player", EntityArgument.player())
+						.executes(ctx -> reset(ctx.getSource(), EntityArgument.getPlayer(ctx, "player"))))))
+			.then(Commands.literal("tag")
+				.then(Commands.literal("godmace")
+					.executes(ctx -> tagGodMace(ctx.getSource(), ctx.getSource().getPlayerOrException()))
+					.then(Commands.argument("player", EntityArgument.player())
+						.executes(ctx -> tagGodMace(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+				.then(Commands.literal("clear")
+					.executes(ctx -> {
+						Afterlife.clearGodMaceId();
+						ctx.getSource().sendSuccess(() -> Component.literal("God mace invalidated"), true);
+						return 1;
+					}))
+				.then(Commands.literal("devtag")
+					.then(Commands.argument("player", EntityArgument.player())
+						.then(Commands.literal("clear")
+							.executes(ctx -> {
+								ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+								DevTag.clear(ctx.getSource().getServer(), p);
+								ctx.getSource().sendSuccess(() -> Component.literal("Cleared tag for " + p.getGameProfile().name()), true);
+								return 1;
+							}))
+						.then(Commands.argument("text", StringArgumentType.greedyString())
+							.executes(ctx -> {
+								ServerPlayer p = EntityArgument.getPlayer(ctx, "player");
+								String text = StringArgumentType.getString(ctx, "text");
+								DevTag.set(ctx.getSource().getServer(), p, text);
+								ctx.getSource().sendSuccess(() -> Component.literal("Tag for " + p.getGameProfile().name() + ": ").append(DevTag.parse(text)), true);
+								return 1;
+							}))))));
+	}
 
 	private static int tagGodMace(CommandSourceStack src, ServerPlayer p) {
 		ItemStack held = p.getMainHandItem();
